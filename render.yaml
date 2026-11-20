@@ -5,3 +5,6 @@ services:
     buildCommand: echo 'Static assets ready'
     staticPublishPath: ./skyward
     autoDeployTrigger: commit
+    envVars:
+      - key: SKIP_INSTALL_DEPS
+        value: 'true'
