@@ -45,7 +45,7 @@ body{background-attachment:fixed}
 <div class="vignette"></div><div id="sunflare"></div>
 <div id="toast" aria-live="polite"></div>
 <main id="menu" class="menu glass">
-  <div class="menu-upper"><span class="eyebrow">FLIGHT SIMULATION / ARCADE ARENA</span><span class="ver">BUILD 1.4</span></div>
+  <div class="menu-upper"><span class="eyebrow">FLIGHT SIMULATION / ARCADE ARENA</span><span class="ver">BUILD 1.4.1</span></div>
   <div class="menu-hero"><div class="reticle-logo">✳</div><div><h1>SKY<span>WARD</span></h1><p class="tagline">Pick your jet. Paint the sky. Rule the arena.</p></div></div>
   <div class="menu-columns">
     <section class="panel settings"><h2><span class="panel-index">01</span> AIRCRAFT &amp; ARENA</h2>
@@ -82,7 +82,7 @@ body{background-attachment:fixed}
 <div id="pause" class="pause hidden"><div class="pause-card glass"><span class="eyebrow">SYSTEM // PAUSED</span><h2>RETURN TO THE SKY?</h2><p>The mission will continue when you resume. Multiplayer hosts cannot pause the shared simulation.</p><button id="resumeBtn" class="action-btn primary">RESUME FLIGHT ↗</button><button id="exitBtn" class="action-btn">RETURN TO HANGAR</button></div></div>
 <div id="err" class="error hidden"></div>
 <script>
-/* SKYWARD 1.4 — self-contained procedural WebGL2 flight arena.
+/* SKYWARD 1.4.1 — self-contained procedural WebGL2 flight arena.
  * Upgraded visual pass, more believable energy-based flight handling, and simple guns/missiles.
  * External dependency: PeerJS only for optional multiplayer; solo is offline-capable.
  */
@@ -145,6 +145,13 @@ class Builder{
  plate(points,thick,col){const n=points.length;const a=points.map(p=>[p[0],p[1]+thick/2,p[2]]),b=points.map(p=>[p[0],p[1]-thick/2,p[2]]);for(let i=1;i<n-1;i++){this.tri(a[0],a[i],a[i+1],col);this.tri(b[0],b[i+1],b[i],col.map(c=>c*.83));}for(let i=0;i<n;i++){let k=(i+1)%n;this.quad(a[i],b[i],b[k],a[k],col.map(c=>c*.72))}}
  box(center,size,col){const [x,y,z]=center,[a,b,c]=size.map(s=>s/2),p=[[x-a,y-b,z-c],[x+a,y-b,z-c],[x+a,y+b,z-c],[x-a,y+b,z-c],[x-a,y-b,z+c],[x+a,y-b,z+c],[x+a,y+b,z+c],[x-a,y+b,z+c]];[[0,1,2,3],[4,7,6,5],[0,4,5,1],[3,2,6,7],[1,5,6,2],[0,3,7,4]].forEach(k=>this.quad(...k.map(i=>p[i]),col))}
  cylinder(z0,z1,cx,cy,rx,ry,n,col){const rings=[];for(const z of [z0,z1]){const row=[];for(let i=0;i<n;i++){const t=i/n*Math.PI*2;row.push([cx+Math.cos(t)*rx,cy+Math.sin(t)*ry,z])}rings.push(row)}for(let i=0;i<n;i++){let k=(i+1)%n;this.quad(rings[0][i],rings[0][k],rings[1][k],rings[1][i],col)}this.tri([cx,cy,z0],rings[0][1],rings[0][0],col);for(let i=1;i<n-1;i++){this.tri([cx,cy,z0],rings[0][i+1],rings[0][i],col);this.tri([cx,cy,z1],rings[1][i],rings[1][i+1],col)}}
+ cylinderY(y0,y1,cx,cz,rx,rz,n,col){
+  const rings=[];for(const y of [y0,y1]){const row=[];for(let i=0;i<n;i++){
+   const a=i*Math.PI*2/n;row.push([cx+Math.cos(a)*rx,y,cz+Math.sin(a)*rz]);
+  }rings.push(row)}
+  for(let i=0;i<n;i++){const q=(i+1)%n;this.quad(rings[0][i],rings[1][i],rings[1][q],rings[0][q],col)}
+  for(let i=1;i<n-1;i++){this.tri([cx,y0,cz],rings[0][i+1],rings[0][i],col);this.tri([cx,y1,cz],rings[1][i],rings[1][i+1],col)}
+ }
  get array(){return new Float32Array(this.v)}
 }
 function createAircraftMesh(def){
@@ -386,6 +393,7 @@ function createFlameMesh(def){
  }
  return b.array;
 }
+function affineZ(pos,angle){const c=Math.cos(angle),s=Math.sin(angle);return new Float32Array([c,s,0,0,-s,c,0,0,0,0,1,0,pos[0],pos[1],pos[2],1]);}
 function affine(pos,rotX=0,rotY=0,scale=[1,1,1]){
  const a=Math.cos(rotX),b=Math.sin(rotX),c=Math.cos(rotY),d=Math.sin(rotY);
  return new Float32Array([c*scale[0],0,-d*scale[0],0,d*b*scale[1],a*scale[1],c*b*scale[1],0,d*a*scale[2],-b*scale[2],c*a*scale[2],0,pos[0],pos[1],pos[2],1]);
@@ -483,7 +491,7 @@ function createLandmarkMesh(id){
  if(id==='plains'||id==='snow'||id==='mountain'){
   for(let i=0;i<6;i++){
    const x=-520+i*170,z=-860+(i%2)*210,h=y(x,z),t=65+i*8;
-   b.cylinder(0.1,t,x,h,.90,1.2,10,white);
+   b.cylinderY(h,h+t,x,z,.90,1.2,10,white);
    b.box([x,h+t,z],[8,3,14],steel);
   }
  }
@@ -495,14 +503,14 @@ function createLandmarkMesh(id){
    b.plate([[x-38,h+25,z-30],[x,h+43,z-30],[x+38,h+25,z-30],[x+38,h+25,z+30],[x,h+43,z+30],[x-38,h+25,z+30]],.6,[.22,.29,.30]);
   }
   for(let i=0;i<4;i++){
-   const x=-1580+i*46,z=-1460,h=y(x,z);b.cylinder(0,66,x,h,16,16,16,[.68,.72,.69]);
+   const x=-1580+i*46,z=-1460,h=y(x,z);b.cylinderY(h,h+66,x,z,16,16,16,[.68,.72,.69]);
   }
  }
  if(id==='desert'){
   // Color-banded buttes and a remote sandstone settlement.
   for(let i=0;i<17;i++){
    const x=-2200+rnd(i*3+1)*3400,z=-2600+rnd(i*5+4)*3000,h=y(x,z),t=105+rnd(i*17)*200,rr=45+rnd(i*9)*55;
-   b.cylinder(0,t,x,h+5,rr*.72,rr,10,i%3?[.62,.38,.24]:[.50,.30,.21]);
+   b.cylinderY(h+5,h+t+5,x,z,rr*.72,rr,10,i%3?[.62,.38,.24]:[.50,.30,.21]);
    for(let j=1;j<5;j++)b.box([x,h+5+t*j/5,z],[rr*1.5,4,rr*1.45],j%2?[.69,.45,.30]:[.51,.30,.21]);
   }
   for(let i=0;i<20;i++){
@@ -518,7 +526,7 @@ function createLandmarkMesh(id){
    b.box([x,h+28,z],[80,7,56],i%2?[.21,.55,.67]:[.71,.35,.24]);
    for(let k=-1;k<=1;k++)b.box([x+k*18,h+14,z+28],[10,10,1.2],[.20,.41,.55]);
   }
-  const tx=1250,tz=1210,ty=y(tx,tz);b.cylinder(0,112,tx,ty,2.8,3.5,12,steel);
+  const tx=1250,tz=1210,ty=y(tx,tz);b.cylinderY(ty,ty+112,tx,tz,2.8,3.5,12,steel);
   ellipsoid(b,[tx,ty+117,tz],[17,15,17],white,11,18);
  }
  if(id==='mountain'){
@@ -528,7 +536,7 @@ function createLandmarkMesh(id){
    b.box([x,h+ht*.5,z],[65,ht,52],[.46,.37,.29]);
    b.plate([[x-37,h+ht,z-27],[x,h+ht+22,z-27],[x+37,h+ht,z-27],[x+37,h+ht,z+27],[x,h+ht+22,z+27],[x-37,h+ht,z+27]],.5,[.26,.30,.33]);
   }
-  const xx=-900,zz=-2000,hh=y(xx,zz);b.cylinder(0,120,xx,hh,5,6,12,steel);b.box([xx,hh+126,zz],[52,14,52],[.19,.26,.30]);
+  const xx=-900,zz=-2000,hh=y(xx,zz);b.cylinderY(hh,hh+120,xx,zz,5,6,12,steel);b.box([xx,hh+126,zz],[52,14,52],[.19,.26,.30]);
  }
  if(id==='night'){
   // Lit skyline becomes an obvious landmark during night dogfights.
@@ -696,7 +704,7 @@ function draw3D(dt){const [w,h]=dimensions(),rawCam=getCamera(dt);
   }cam={eye:state.smoothCam.eye,target:state.smoothCam.target,up:rawCam.up};
  }else state.smoothCam=null;
  const vp=M4mul(M4perspective((state.camera===1?78:61)*RAD,w/h,.5,38000),M4look(cam.eye,cam.target,cam.up));state.viewProj=vp;state.camEye=cam.eye;R.startFrame(state.world,cam.eye,vp);
- R.drawClouds(vp,canvas.height*2.9);R.draw('terrain');R.draw('roads');R.draw('props');R.draw('landmarks');if(['plains','snow','mountain'].includes(state.world.id)){for(let i=0;i<6;i++){const x=-520+i*170,z=-860+(i%2)*210,h=heightAt(x,z,state.world.id)+65+i*8;R.draw('windRotor',affine([x,h,z],0,state.time*.5+i))}}for(let i=0;i<5;i++){const z=975+i*67+Math.sin(state.time*.33+i)*20,x=-220+i*90;const y=heightAt(x,z,state.world.id)+2;R.draw('taxi',affine([x,y,z]));}
+ R.drawClouds(vp,canvas.height*2.9);R.draw('terrain');R.draw('roads');R.draw('props');R.draw('landmarks');if(['plains','snow','mountain'].includes(state.world.id)){for(let i=0;i<6;i++){const x=-520+i*170,z=-860+(i%2)*210,h=heightAt(x,z,state.world.id)+65+i*8;R.draw('windRotor',affineZ([x,h,z],state.time*.5+i))}}for(let i=0;i<5;i++){const z=975+i*67+Math.sin(state.time*.33+i)*20,x=-220+i*90;const y=heightAt(x,z,state.world.id)+2;R.draw('taxi',affine([x,y,z]));}
  const craft=state.mode==='menu'?[{id:'menu',jet:$('jetSelect').value,pos:[0,heightAt(0,0,state.world.id)+570,0],yaw:Math.PI*.12+Math.sin(state.time*.15)*.1,pitch:.09,roll:Math.sin(state.time*.38)*.14,respawn:0}]:[state.user,...state.npc,...state.others].filter(Boolean);
  for(const a of craft){if(a.respawn>0)continue;if(a===state.user&&state.camera===1)continue;
   const m=modelMatrix(a);R.draw('plane-'+a.jet,m);
