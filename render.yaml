@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: skyward-flight-arena
+    runtime: static
+    buildCommand: echo 'Static assets ready'
+    staticPublishPath: ./skyward
+    autoDeployTrigger: commit
